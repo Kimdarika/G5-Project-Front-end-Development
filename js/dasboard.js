@@ -70,6 +70,35 @@ const includeMetadataCheckbox = document.getElementById("includeMetadata");
 const exportFileNameInput = document.getElementById("exportFileName");
 const exportLoading = document.getElementById("exportLoading");
 
+// TODO Feature Elements (Fixed)
+const taskPanel = document.getElementById("taskPanel");
+const todoListContainer = document.getElementById("todoListContainer");
+const totalTasksEl = document.getElementById("totalTasks");
+const completedTasksEl = document.getElementById("completedTasks");
+const pendingTasksEl = document.getElementById("pendingTasks");
+const overdueTasksEl = document.getElementById("overdueTasks");
+const createFirstTodoBtn = document.getElementById("createFirstTodoBtn");
+const todoEditorModal = document.getElementById("todoEditorModal");
+const todoEditorTitle = document.getElementById("todoEditorTitle");
+const todoTitle = document.getElementById("todoTitle");
+const todoDescription = document.getElementById("todoDescription");
+const todoCategory = document.getElementById("todoCategory");
+const todoTags = document.getElementById("todoTags");
+const todoPinned = document.getElementById("todoPinned");
+const todoListEditor = document.getElementById("todoListEditor");
+const saveTodoBtn = document.getElementById("saveTodoBtn");
+const cancelTodoBtn = document.getElementById("cancelTodoBtn");
+const closeTodoBtn = document.getElementById("closeTodoBtn");
+const addTaskBtn = document.getElementById("addTaskBtn");
+const taskModal = document.getElementById("taskModal");
+const taskModalTitle = document.getElementById("taskModalTitle");
+const saveTaskBtn = document.getElementById("saveTaskBtn");
+const cancelTaskBtn = document.getElementById("cancelTaskBtn");
+const closeTaskBtn = document.getElementById("closeTaskBtn");
+const taskTitle = document.getElementById("taskTitle");
+const taskPriority = document.getElementById("taskPriority");
+const taskDueDate = document.getElementById("taskDueDate");
+
 const todoManager = {
   todos: [],
   tasks: [],
@@ -80,11 +109,15 @@ const todoManager = {
 
     this.todos = savedTodos ? JSON.parse(savedTodos) : [];
     this.tasks = savedTasks ? JSON.parse(savedTasks) : [];
+    console.log(
+      `Loaded ${this.todos.length} todos and ${this.tasks.length} tasks`
+    );
   },
 
   save() {
     localStorage.setItem("nexus_todos", JSON.stringify(this.todos));
     localStorage.setItem("nexus_tasks", JSON.stringify(this.tasks));
+    console.log("Saved todos and tasks to localStorage");
   },
 
   addTodo(todoData) {
@@ -97,6 +130,7 @@ const todoManager = {
     };
     this.todos.push(todo);
     this.save();
+    console.log("Added todo:", todo.id);
     return todo;
   },
 
@@ -109,6 +143,7 @@ const todoManager = {
         updatedAt: new Date().toISOString(),
       };
       this.save();
+      console.log("Updated todo:", id);
       return this.todos[index];
     }
     return null;
@@ -118,7 +153,12 @@ const todoManager = {
     const index = this.todos.findIndex((todo) => todo.id === id);
     if (index !== -1) {
       this.todos.splice(index, 1);
+
+      // Delete all associated tasks
+      this.tasks = this.tasks.filter((task) => task.todoId !== id);
+
       this.save();
+      console.log("Deleted todo and its tasks:", id);
       return true;
     }
     return false;
@@ -134,6 +174,7 @@ const todoManager = {
     };
     this.tasks.push(task);
     this.save();
+    console.log("Added task:", task.id);
     return task;
   },
 
@@ -143,8 +184,10 @@ const todoManager = {
       this.tasks[index] = {
         ...this.tasks[index],
         ...updates,
+        updatedAt: new Date().toISOString(),
       };
       this.save();
+      console.log("Updated task:", id);
       return this.tasks[index];
     }
     return null;
@@ -155,6 +198,7 @@ const todoManager = {
     if (index !== -1) {
       this.tasks.splice(index, 1);
       this.save();
+      console.log("Deleted task:", id);
       return true;
     }
     return false;
@@ -205,6 +249,7 @@ function formatNotePreview(content, maxLength = 150) {
 
   return text;
 }
+
 document.addEventListener("DOMContentLoaded", function () {
   console.log("DOM loaded, initializing app...");
   initializeApp();
@@ -294,6 +339,15 @@ function setupEventListeners() {
   if (saveNoteBtn) saveNoteBtn.addEventListener("click", saveNote);
   if (cancelNoteBtn) cancelNoteBtn.addEventListener("click", closeEditor);
   if (closeEditorBtn) closeEditorBtn.addEventListener("click", closeEditor);
+
+  // TODO Feature Event Listeners (Fixed)
+  if (saveTodoBtn) saveTodoBtn.addEventListener("click", saveTodo);
+  if (cancelTodoBtn) cancelTodoBtn.addEventListener("click", closeTodoEditor);
+  if (closeTodoBtn) closeTodoBtn.addEventListener("click", closeTodoEditor);
+  if (addTaskBtn) addTaskBtn.addEventListener("click", addTodoTaskItem);
+  if (saveTaskBtn) saveTaskBtn.addEventListener("click", saveTask);
+  if (cancelTaskBtn) cancelTaskBtn.addEventListener("click", closeTaskModal);
+  if (closeTaskBtn) closeTaskBtn.addEventListener("click", closeTaskModal);
 
   // Export Modal
   if (closeExportBtn)
@@ -474,11 +528,6 @@ async function loadNotes() {
 
       const savedTrash = localStorage.getItem(`nexusTrash_${currentUser.uid}`);
       trashNotes = savedTrash ? JSON.parse(savedTrash) : [];
-      if (notes.length === 0) {
-        console.log("Creating sample notes for new user");
-        notes = createSampleNotes();
-        await saveNotesToStorage();
-      }
 
       console.log(
         `Loaded ${notes.length} notes and ${trashNotes.length} trash notes from localStorage`
@@ -530,7 +579,7 @@ function renderNotes() {
     return true;
   });
 
-  //  pinned first
+  // Sort pinned first
   filteredNotes.sort((a, b) => {
     if (a.pinned && !b.pinned) return -1;
     if (!a.pinned && b.pinned) return 1;
@@ -731,7 +780,6 @@ function filterByCategory(category) {
   currentCategory = category;
   currentTag = null;
 
-  const taskPanel = document.getElementById("taskPanel");
   if (taskPanel) taskPanel.style.display = "none";
 
   if (notesGrid) notesGrid.style.display = "grid";
@@ -1218,16 +1266,27 @@ function toggleSidebarCollapse() {
   icon.classList.toggle("fa-chevron-right");
 }
 
+// TODO FEATURE FUNCTIONS (Fixed)
 function showTodoPage() {
   console.log("Showing TODO page");
 
   if (notesGrid) notesGrid.style.display = "none";
   if (emptyState) emptyState.style.display = "none";
 
-  const taskPanel = document.getElementById("taskPanel");
   if (taskPanel) {
     taskPanel.style.display = "block";
     loadTodoData();
+  } else {
+    console.error("Task panel not found");
+    // Create task panel if it doesn't exist
+    const mainContent = document.querySelector(".main-content");
+    if (mainContent) {
+      const panel = document.createElement("div");
+      panel.id = "taskPanel";
+      panel.className = "task-panel";
+      mainContent.appendChild(panel);
+      setTimeout(() => loadTodoData(), 100);
+    }
   }
 
   document.querySelectorAll(".category-item").forEach((item) => {
@@ -1237,20 +1296,19 @@ function showTodoPage() {
 
 function loadTodoData() {
   const userTodos = todoManager.getTodosByUserId(currentUser.uid);
+  console.log(
+    `Loading TODO data for user ${currentUser.uid}: ${userTodos.length} todos`
+  );
 
   const stats = todoManager.getTaskStats();
-
-  const totalTasksEl = document.getElementById("totalTasks");
-  const completedTasksEl = document.getElementById("completedTasks");
-  const pendingTasksEl = document.getElementById("pendingTasks");
-  const overdueTasksEl = document.getElementById("overdueTasks");
 
   if (totalTasksEl) totalTasksEl.textContent = stats.total;
   if (completedTasksEl) completedTasksEl.textContent = stats.completed;
   if (pendingTasksEl) pendingTasksEl.textContent = stats.pending;
   if (overdueTasksEl) overdueTasksEl.textContent = stats.overdue;
 
-  const container = document.getElementById("todoListContainer");
+  const container =
+    todoListContainer || document.getElementById("todoListContainer");
   if (container) {
     if (userTodos.length === 0) {
       container.innerHTML = `
@@ -1266,9 +1324,13 @@ function loadTodoData() {
         </div>
       `;
 
-      document
-        .getElementById("createFirstTodoBtn")
-        ?.addEventListener("click", openNewTodoEditor);
+      // Add event listener to the create button
+      setTimeout(() => {
+        const createBtn = document.getElementById("createFirstTodoBtn");
+        if (createBtn) {
+          createBtn.addEventListener("click", openNewTodoEditor);
+        }
+      }, 100);
     } else {
       container.innerHTML = "";
       userTodos.forEach((todo) => {
@@ -1276,6 +1338,8 @@ function loadTodoData() {
         container.appendChild(todoElement);
       });
     }
+  } else {
+    console.error("Todo list container not found");
   }
 
   updateTodoStats();
@@ -1343,85 +1407,83 @@ function createTodoElement(todo) {
   `;
 
   // Add event listeners
-  element
-    .querySelector(".edit-todo")
-    .addEventListener("click", () => openEditTodoEditor(todo.id));
-  element
-    .querySelector(".delete-todo")
-    .addEventListener("click", () => deleteTodo(todo.id));
-  element
-    .querySelector(".add-task")
-    .addEventListener("click", () => openNewTaskModal(todo.id));
+  element.querySelector(".edit-todo").addEventListener("click", (e) => {
+    e.stopPropagation();
+    openEditTodoEditor(todo.id);
+  });
+
+  element.querySelector(".delete-todo").addEventListener("click", (e) => {
+    e.stopPropagation();
+    deleteTodo(todo.id);
+  });
+
+  element.querySelector(".add-task").addEventListener("click", (e) => {
+    e.stopPropagation();
+    openNewTaskModal(todo.id);
+  });
+
   element.querySelectorAll(".task-checkbox").forEach((checkbox) => {
-    checkbox.addEventListener("change", (e) =>
-      toggleTaskCompletion(e.target.dataset.taskId, e.target.checked)
-    );
+    checkbox.addEventListener("change", (e) => {
+      e.stopPropagation();
+      toggleTaskCompletion(e.target.dataset.taskId, e.target.checked);
+    });
   });
 
   return element;
 }
 
 function openNewTodoEditor() {
-  const todoEditorModal = document.getElementById("todoEditorModal");
-  const todoEditorTitle = document.getElementById("todoEditorTitle");
-  const todoTitle = document.getElementById("todoTitle");
-  const todoDescription = document.getElementById("todoDescription");
-  const todoCategory = document.getElementById("todoCategory");
-  const todoTags = document.getElementById("todoTags");
-  const todoPinned = document.getElementById("todoPinned");
-  const todoListEditor = document.getElementById("todoListEditor");
+  console.log("Opening new todo editor");
 
   if (todoEditorModal) {
     todoEditorTitle.textContent = "New To-Do List";
-    todoTitle.value = "";
-    todoDescription.value = "";
-    todoCategory.value = "todo";
-    todoTags.value = "";
-    todoPinned.checked = false;
-    todoListEditor.innerHTML = "";
 
+    // Clear form
+    if (todoTitle) todoTitle.value = "";
+    if (todoDescription) todoDescription.value = "";
+    if (todoCategory) todoCategory.value = "todo";
+    if (todoTags) todoTags.value = "";
+    if (todoPinned) todoPinned.checked = false;
+    if (todoListEditor) todoListEditor.innerHTML = "";
+
+    // Add one empty task item
     addTodoTaskItem();
 
     todoEditorModal.classList.add("active");
-    todoTitle.focus();
+    if (todoTitle) todoTitle.focus();
+  } else {
+    console.error("Todo editor modal not found");
   }
 }
 
 function openEditTodoEditor(todoId) {
+  console.log("Opening edit todo editor for:", todoId);
   const todo = todoManager.todos.find((t) => t.id === todoId);
   if (!todo) return;
 
-  const todoEditorModal = document.getElementById("todoEditorModal");
-  const todoEditorTitle = document.getElementById("todoEditorTitle");
-  const todoTitle = document.getElementById("todoTitle");
-  const todoDescription = document.getElementById("todoDescription");
-  const todoCategory = document.getElementById("todoCategory");
-  const todoTags = document.getElementById("todoTags");
-  const todoPinned = document.getElementById("todoPinned");
-  const todoListEditor = document.getElementById("todoListEditor");
-
   if (todoEditorModal) {
     todoEditorTitle.textContent = "Edit To-Do List";
-    todoTitle.value = todo.title;
-    todoDescription.value = todo.description || "";
-    todoCategory.value = todo.category || "todo";
-    todoTags.value = todo.tags ? todo.tags.join(", ") : "";
-    todoPinned.checked = todo.pinned || false;
-    todoListEditor.innerHTML = "";
 
+    // Fill form with todo data
+    if (todoTitle) todoTitle.value = todo.title;
+    if (todoDescription) todoDescription.value = todo.description || "";
+    if (todoCategory) todoCategory.value = todo.category || "todo";
+    if (todoTags) todoTags.value = todo.tags ? todo.tags.join(", ") : "";
+    if (todoPinned) todoPinned.checked = todo.pinned || false;
+    if (todoListEditor) todoListEditor.innerHTML = "";
+
+    // Add tasks
     const tasks = todoManager.getTasksByTodoId(todoId);
     tasks.forEach((task) => {
       addTodoTaskItem(task);
     });
 
     todoEditorModal.dataset.currentTodoId = todoId;
-
     todoEditorModal.classList.add("active");
   }
 }
 
 function addTodoTaskItem(taskData = null) {
-  const todoListEditor = document.getElementById("todoListEditor");
   if (!todoListEditor) return;
 
   const taskId = taskData?.id || generateId();
@@ -1464,30 +1526,31 @@ function addTodoTaskItem(taskData = null) {
   });
 }
 
-async function saveTodo() {
-  const todoTitle = document.getElementById("todoTitle");
-  const todoDescription = document.getElementById("todoDescription");
-  const todoCategory = document.getElementById("todoCategory");
-  const todoTags = document.getElementById("todoTags");
-  const todoPinned = document.getElementById("todoPinned");
-  const todoEditorModal = document.getElementById("todoEditorModal");
+function saveTodo() {
+  console.log("Saving todo...");
 
-  if (!todoTitle || !todoEditorModal) return;
+  if (!todoTitle) {
+    console.error("Todo title element not found");
+    return;
+  }
 
   const title = todoTitle.value.trim();
-  const description = todoDescription.value.trim();
-  const category = todoCategory.value;
-  const tags = todoTags.value
-    .split(",")
-    .map((tag) => tag.trim())
-    .filter((tag) => tag);
-  const pinned = todoPinned.checked;
+  const description = todoDescription ? todoDescription.value.trim() : "";
+  const category = todoCategory ? todoCategory.value : "todo";
+  const tags = todoTags
+    ? todoTags.value
+        .split(",")
+        .map((tag) => tag.trim())
+        .filter((tag) => tag)
+    : [];
+  const pinned = todoPinned ? todoPinned.checked : false;
 
   if (!title) {
     showError("Please enter a title for your to-do list");
     return;
   }
 
+  // Collect tasks from the editor
   const tasks = [];
   document.querySelectorAll(".todo-task-item").forEach((item) => {
     const taskTitle = item.querySelector(".task-title").value.trim();
@@ -1502,9 +1565,10 @@ async function saveTodo() {
     }
   });
 
-  const todoId = todoEditorModal.dataset.currentTodoId;
+  const todoId = todoEditorModal ? todoEditorModal.dataset.currentTodoId : null;
 
   if (todoId) {
+    // Update existing todo
     const todo = todoManager.updateTodo(todoId, {
       title,
       description,
@@ -1514,10 +1578,12 @@ async function saveTodo() {
     });
 
     if (todo) {
+      // Delete old tasks and add new ones
       const oldTasks = todoManager.getTasksByTodoId(todoId);
       oldTasks.forEach((task) => {
         todoManager.deleteTask(task.id);
       });
+
       tasks.forEach((task) => {
         todoManager.addTask(todoId, {
           title: task.title,
@@ -1530,6 +1596,7 @@ async function saveTodo() {
       showSuccess("To-Do list updated!");
     }
   } else {
+    // Create new todo
     const todo = todoManager.addTodo({
       title,
       description,
@@ -1538,6 +1605,7 @@ async function saveTodo() {
       pinned,
     });
 
+    // Add tasks
     tasks.forEach((task) => {
       todoManager.addTask(todo.id, {
         title: task.title,
@@ -1555,7 +1623,6 @@ async function saveTodo() {
 }
 
 function closeTodoEditor() {
-  const todoEditorModal = document.getElementById("todoEditorModal");
   if (todoEditorModal) {
     todoEditorModal.classList.remove("active");
     delete todoEditorModal.dataset.currentTodoId;
@@ -1563,21 +1630,70 @@ function closeTodoEditor() {
 }
 
 function openNewTaskModal(todoId = null) {
-  const taskModal = document.getElementById("taskModal");
-  const taskModalTitle = document.getElementById("taskModalTitle");
+  console.log("Opening new task modal for todo:", todoId);
 
-  if (taskModal && taskModalTitle) {
+  if (taskModal) {
     taskModalTitle.textContent = todoId ? "Add Task" : "New Task";
 
     if (todoId) {
       taskModal.dataset.todoId = todoId;
     }
 
+    // Clear form
+    if (taskTitle) taskTitle.value = "";
+    if (taskPriority) taskPriority.value = "medium";
+    if (taskDueDate) taskDueDate.value = "";
+
     taskModal.classList.add("active");
+    if (taskTitle) taskTitle.focus();
+  }
+}
+
+function saveTask() {
+  console.log("Saving task...");
+
+  if (!taskTitle) {
+    console.error("Task title element not found");
+    return;
+  }
+
+  const title = taskTitle.value.trim();
+  const priority = taskPriority ? taskPriority.value : "medium";
+  const dueDate = taskDueDate ? taskDueDate.value : null;
+  const todoId = taskModal ? taskModal.dataset.todoId : null;
+
+  if (!title) {
+    showError("Please enter a task title");
+    return;
+  }
+
+  if (todoId) {
+    const task = todoManager.addTask(todoId, {
+      title,
+      priority,
+      dueDate,
+      completed: false,
+    });
+
+    if (task) {
+      showSuccess("Task added!");
+      closeTaskModal();
+      loadTodoData();
+    }
+  } else {
+    showError("No todo list selected");
+  }
+}
+
+function closeTaskModal() {
+  if (taskModal) {
+    taskModal.classList.remove("active");
+    delete taskModal.dataset.todoId;
   }
 }
 
 function toggleTaskCompletion(taskId, completed) {
+  console.log(`Toggling task ${taskId} completion to: ${completed}`);
   todoManager.updateTask(taskId, { completed });
   loadTodoData();
 }
@@ -1596,13 +1712,7 @@ function deleteTodo(todoId) {
     color: currentTheme === "dark" ? "#f1f5f9" : "#1e293b",
   }).then((result) => {
     if (result.isConfirmed) {
-      const tasks = todoManager.getTasksByTodoId(todoId);
-      tasks.forEach((task) => {
-        todoManager.deleteTask(task.id);
-      });
-
       todoManager.deleteTodo(todoId);
-
       showSuccess("To-Do list deleted!");
       loadTodoData();
     }
@@ -1611,11 +1721,14 @@ function deleteTodo(todoId) {
 
 function updateTodoStats() {
   const stats = todoManager.getTaskStats();
+
+  // Update sidebar count
   const todoCountEl = document.getElementById("todoCount");
   if (todoCountEl) {
     todoCountEl.textContent = stats.total;
   }
 
+  // Update badge
   const todoBadge = document.getElementById("todoBadge");
   if (todoBadge) {
     if (stats.pending > 0) {

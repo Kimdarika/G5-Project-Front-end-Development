@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 from flask import Flask, render_template, request, redirect, url_for, session, flash
 import os
 
@@ -54,7 +53,6 @@ def logout():
 
 if __name__ == "__main__":
     app.run(debug=True, host="0.0.0.0", port=5000)
-=======
 from flask import Flask, render_template, request, jsonify
 from datetime import datetime
 import json
@@ -144,4 +142,3 @@ def permanent_delete(note_id):
 
 if __name__ == "__main__":
     app.run(debug=True)
->>>>>>> savincode
